@@ -96,7 +96,7 @@ function setLang(l){
  const f=$('.work-filter.is-active');renderStatic();
  if(f&&f.dataset.f!=='all')f.click();
 }
-const NETLIFY_DEPLOYMENT=true;
+
 listen($('#form'),'submit',async e=>{
  e.preventDefault();const f=e.target;if(!f.reportValidity())return;
  const status=$('#formStatus'),fallback=$('#formFallback'),button=f.querySelector('[type=submit]'),ar=lang==='ar';
@@ -104,11 +104,13 @@ listen($('#form'),'submit',async e=>{
  const mailBody=String(values.get('message')||'')+'\n\n'+String(values.get('name')||'')+'\n'+String(values.get('email')||'')+'\n'+String(values.get('phone')||'')+'\n'+String(values.get('company')||'');
  fallback.href='mailto:oomat25063@gmail.com?subject='+encodeURIComponent('Portfolio contact')+'&body='+encodeURIComponent(mailBody);
  fallback.textContent=ar?'إرسال بالبريد بدلًا من ذلك ↗':'Send by email instead ↗';fallback.hidden=true;
- if(!NETLIFY_DEPLOYMENT||location.protocol==='file:'||(!location.hostname.endsWith('.netlify.app')&&f.hasAttribute('data-netlify'))){status.textContent=ar?'دي نسخة معاينة. الإرسال المباشر متاح على نسخة Netlify بعد تفعيل النموذج. تقدر تستخدم البريد بدلًا منه.':'This preview cannot receive submissions. Direct submission works on the configured Netlify deployment. You can use email instead.';fallback.hidden=false;return;}
- if(values.get('bot-field'))return;
+ const key=String(values.get('access_key')||'');
+ if(!key||key==='YOUR_WEB3FORMS_ACCESS_KEY'){status.textContent=ar?'الإرسال المباشر غير مفعل بعد. استخدم البريد بدلًا منه.':'Direct submission is not configured yet. Please use email instead.';fallback.hidden=false;return;}
+ if(values.get('botcheck'))return;
+ values.delete('botcheck');
  button.disabled=true;status.textContent=ar?'جاري إرسال رسالتك…':'Sending your message…';f.setAttribute('aria-busy','true');
  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),20000);
- try{const response=await fetch('/',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body,signal:controller.signal});if(!response.ok)throw new Error('submission');status.textContent=ar?'تم إرسال رسالتك بنجاح. شكرًا لتواصلك!':'Your message was submitted. Thank you!';f.reset();}
+ try{const response=await fetch('https://api.web3forms.com/submit',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(Object.fromEntries(values)),signal:controller.signal});const result=await response.json();if(!response.ok||result.success!==true)throw new Error('submission');status.textContent=ar?'تم إرسال رسالتك بنجاح. شكرًا لتواصلك!':'Your message was submitted. Thank you!';f.reset();}
  catch(error){status.textContent=ar?'تعذّر تأكيد إرسال رسالتك. بياناتك لسه موجودة. جرّب تاني أو ابعتها بالبريد من الرابط التالي.':'We could not confirm submission. Your details are still here. Try again or send by email below.';fallback.hidden=false;}
  finally{clearTimeout(timer);button.disabled=false;f.removeAttribute('aria-busy');}
 });
